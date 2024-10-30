@@ -1,4 +1,4 @@
-name: Build, Push, and Sign Docker Image with Keyless Cosign
+name: Build, Push, and Sign Docker Image with Cosign
 
 on:
   push:
@@ -24,6 +24,12 @@ jobs:
         run: |
           docker push ghcr.io/${{ github.repository }}/my-app:latest
 
+      - name: Get Image Digest
+        id: digest
+        run: |
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/${{ github.repository }}/my-app:latest)
+          echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_ENV
+
       - name: Install Cosign
         run: |
           curl -LO https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
@@ -33,23 +39,14 @@ jobs:
       - name: Get Private Key
         run: |
           echo "${{ secrets.COSIGN_KEY }}" > cosign.key 
-          
+
       - name: Sign Docker Image with Cosign
         env:
           COSIGN_EXPERIMENTAL: "true"
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key cosign.key ghcr.io/${{ github.repository }}/my-app:latest
-          
+          cosign sign --key cosign.key --yes ${{ env.IMAGE_DIGEST }}
+
       - name: Remove Cosign Key File
         run: |
           shred -u cosign.key
-
-      - name: Final Cleanup of Background Processes
-        run: |
-          # Stop all running containers
-          docker ps -q | xargs -r docker stop
-          # Prune any dangling containers, images, networks, etc.
-          docker system prune -f --volumes
-          # Kill any background jobs
-          kill $(jobs -p) || true
