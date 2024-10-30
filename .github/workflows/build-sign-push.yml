@@ -39,8 +39,17 @@ jobs:
           COSIGN_EXPERIMENTAL: "true"
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --yes ghcr.io/${{ github.repository }}/my-app:latest
+          cosign sign --key cosign.key ghcr.io/${{ github.repository }}/my-app:latest
           
       - name: Remove Cosign Key File
         run: |
           shred -u cosign.key
+
+      - name: Final Cleanup of Background Processes
+        run: |
+          # Stop all running containers
+          docker ps -q | xargs -r docker stop
+          # Prune any dangling containers, images, networks, etc.
+          docker system prune -f --volumes
+          # Kill any background jobs
+          kill $(jobs -p) || true
