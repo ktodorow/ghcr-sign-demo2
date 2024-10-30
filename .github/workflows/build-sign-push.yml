@@ -3,7 +3,7 @@ name: Build, Push, and Sign Docker Image with Keyless Cosign
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   build-and-sign:
