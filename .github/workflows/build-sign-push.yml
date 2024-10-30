@@ -12,22 +12,21 @@ jobs:
     permissions:
       id-token: write  # Required for OIDC authentication with Sigstore
       contents: read
-      packages: write  # Needed for pushing images to GHCR
 
     steps:
       - name: Check out the code
         uses: actions/checkout@v2
 
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
 
       - name: Build Docker Image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/my-app:latest .
+          docker build -t ${{ secrets.DOCKER_USER }}/my-app:latest .
 
-      - name: Push Docker Image to GHCR
+      - name: Push Docker Image to Docker Hub
         run: |
-          docker push ghcr.io/${{ github.repository }}/my-app:latest
+          docker push ${{ secrets.DOCKER_USER }}/my-app:latest
 
       - name: Install Cosign
         run: |
@@ -39,4 +38,4 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"  # Enables keyless signing
         run: |
-          cosign sign --yes ghcr.io/${{ github.repository }}/my-app:latest
+          cosign sign --yes docker.io/${{ secrets.DOCKER_USER }}/my-app:latest
