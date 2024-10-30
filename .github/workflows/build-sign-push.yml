@@ -1,4 +1,4 @@
-name: Build, Push, and Sign Docker Image with Cosign
+name: Build, Push, and Keyless Sign Docker Image with Cosign
 
 on:
   push:
@@ -8,6 +8,11 @@ on:
 jobs:
   build-and-sign:
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # Required for OIDC authentication with Sigstore
+      contents: read
+      packages: write  # Needed for pushing images to GHCR
 
     steps:
       - name: Check out the code
@@ -24,29 +29,14 @@ jobs:
         run: |
           docker push ghcr.io/${{ github.repository }}/my-app:latest
 
-      - name: Get Image Digest
-        id: digest
-        run: |
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/${{ github.repository }}/my-app:latest)
-          echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_ENV
-
       - name: Install Cosign
         run: |
           curl -LO https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
 
-      - name: Get Private Key
-        run: |
-          echo "${{ secrets.COSIGN_KEY }}" > cosign.key 
-
-      - name: Sign Docker Image with Cosign
+      - name: Keyless Sign Docker Image with Cosign
         env:
-          COSIGN_EXPERIMENTAL: "true"
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_EXPERIMENTAL: "true"  # Enables keyless signing
         run: |
-          cosign sign --key cosign.key --yes ${{ env.IMAGE_DIGEST }}
-
-      - name: Remove Cosign Key File
-        run: |
-          shred -u cosign.key
+          cosign sign ghcr.io/${{ github.repository }}/my-app:latest
