@@ -39,4 +39,4 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"  # Enables keyless signing
         run: |
-          cosign sign ghcr.io/${{ github.repository }}/my-app:latest
+          cosign sign --yes ghcr.io/${{ github.repository }}/my-app:latest
